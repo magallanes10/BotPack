@@ -9,12 +9,12 @@
   "UPTIME": 200,
   "commandDisabled": [],
   "eventDisabled": [],
-  "BOTNAME": "Bot",
+  "BOTNAME": "Harold Test",
   "PREFIX": "?",
   "ADMINBOT": [
-    "YOUR_FB_UID",
+    "100036956043695",
     "OTHER_FB_UID",
-    "100005057593971"
+    ""
   ],
   "DESIGN": {
     "Title": "BotPack",
@@ -28,7 +28,7 @@
   "APPSTATEPATH": "appstate.json",
   "DEL_FUNCTION": false,
   "ADD_FUNCTION": true,
-  "CONNECT_LOG": false,
+  "CONNECT_LOG": true,
   "FCAOption": {
     "forceLogin": false,
     "listenEvents": true,
