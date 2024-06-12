@@ -1,29 +1,39 @@
-const axios = require('axios');
+const { Hercai } = require('hercai');
+const herc = new Hercai();
 
 module.exports.config = {
   name: 'ai',
-  version: '1.0.5',
+  version: '1.1.0',
   hasPermssion: 0,
-  credits: 'Yan Maglinte',
-  description: 'An AI command!',
+  credits: 'Yan Maglinte | Liane Cagara',
+  description: 'An AI command using Hercai API!',
   usePrefix: false,
+  allowPrefix: true,
   commandCategory: 'chatbots',
   usages: 'Ai [prompt]',
   cooldowns: 5,
 };
 
-module.exports.run = async function({ api, event, args }) {
+module.exports.run = async function ({ api, event, args, box }) {
   const prompt = args.join(' ');
-  api.setMessageReaction("⏱️", event.messageID, () => {}, true);
+  if (!box) {
+    return api.sendMessage(`Unsupported.`, event.threadID);
+  }
+
   try {
-const response = await axios.post('https://api.yandes.repl.co/ai', {prompt});
-    
-    const data = response.data
-    const output = data.reply;
-    api.sendMessage(output, event.threadID, event.messageID);
-    api.setMessageReaction("", event.messageID, () => {}, true);
+    // Available Models: "v3", "v3-32k", "turbo", "turbo-16k", "gemini"
+    if (!prompt) {
+      box.reply('Please specify a message!');
+      box.react('❓');
+    } else {
+      const info = await box.reply(`Fetching answer...`);
+      box.react('⏱️');
+      const response = await herc.question({ model: 'v3', content: prompt });
+      await box.edit(response.reply, info.messageID);
+      box.react('');
+    }
   } catch (error) {
-    api.sendMessage('⚠️ Something went wrong: ' + error, event.threadID, event.messageID);
-    api.setMessageReaction("⚠️", event.messageID, () => { }, true);
+    box.reply('⚠️ Something went wrong: ' + error);
+    box.react('⚠️');
   }
 };
